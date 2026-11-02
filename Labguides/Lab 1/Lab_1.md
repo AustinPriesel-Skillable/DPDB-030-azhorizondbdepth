@@ -152,7 +152,7 @@ Deleting a database resource by mistake can disrupt applications and take hours 
     | --- | --- |
     | Lock name | `northstar-hdb-delete-lock` |
     | Lock type | Delete |
-    | Notes | Protect the Northstar HorizonDB cluster from accidental deletion during development. |
+    | Notes | `Protect the Northstar HorizonDB cluster from accidental deletion during development.` |
 
     ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%201/media/image20.png)
 
