@@ -70,9 +70,9 @@ On the **Basics** tab, enter the values in the following table. Leave all other 
 | Setting | Value |
 | --- | --- |
 | Subscription | @lab.CloudSubscription.Name |
-| Resource group | @lab.CloudResourceGroup(ResourceGroup1).Name |
+| Resource group | @lab.CloudResourceGroup(ZAVA-Connect-RG).Name |
 | Cluster name | `northstar-hdb-@lab.LabInstance.Id` |
-| Region | @lab.CloudResourceGroup(ResourceGroup1).Location |
+| Region | @lab.CloudResourceGroup(ZAVA-Connect-RG).Location |
 | PostgreSQL version | 17 |
 | vCores | 2 |
 | High availability | Disabled |
