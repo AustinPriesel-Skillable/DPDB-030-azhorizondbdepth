@@ -65,26 +65,26 @@ Northstar developers cannot start building until a managed PostgreSQL environmen
 
 ### Task 2: Configure the cluster
 
-On the **Basics** tab, enter the values in the following table. Leave all other settings at their defaults.
+1. On the **Basics** tab, enter the values in the following table. Leave all other settings at their defaults.
 
-| Setting | Value |
-| --- | --- |
-| Subscription | @lab.CloudSubscription.Name |
-| Resource group | @lab.CloudResourceGroup(ZAVA-Connect-RG).Name |
-| Cluster name | `northstar-hdb-@lab.LabInstance.Id` |
-| Region | @lab.CloudResourceGroup(ZAVA-Connect-RG).Location |
-| PostgreSQL version | 17 |
-| vCores | 2 |
-| High availability | Disabled |
-| Authentication | PostgreSQL authentication |
-| Admin username | +++NorthstarAdmin+++ |
-| Admin password | +++Password@123!+++ |
+    | Setting | Value |
+    | --- | --- |
+    | Subscription | @lab.CloudSubscription.Name |
+    | Resource group | @lab.CloudResourceGroup(ZAVA-Connect-RG).Name |
+    | Cluster name | `northstar-hdb-@lab.LabInstance.Id` |
+    | Region | @lab.CloudResourceGroup(ZAVA-Connect-RG).Location |
+    | PostgreSQL version | 17 |
+    | vCores | 2 |
+    | High availability | Disabled |
+    | Authentication | PostgreSQL authentication |
+    | Admin username | +++NorthstarAdmin+++ |
+    | Admin password | +++Password@123!+++ |
+    
+    Select **Next**.
 
-Select **Next**.
-
-![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%201/media/image6.png)
-
-![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%201/media/image7.png)
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%201/media/image6.png)
+    
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%201/media/image7.png)
 
 ### Task 3: Configure networking
 
