@@ -57,7 +57,7 @@ In this exercise, you will deploy an Azure HorizonDB cluster, configure a custom
     |------------------------|----------------------------------------------------------------|
     | Subscription           | @lab.CloudSubscription.Name                                          |
     | Resource group         | @lab.CloudResourceGroup(ZAVA-Connect-RG).Name                                                 |
-    | Cluster name           | `finsecure-hdb-lab`                                              |
+    | Cluster name           | `finsecure-hdb-lab-@lab.labinstance.id`                                              |
     | Region                 | @lab.CloudResourceGroup(ZAVA-Connect-RG).Location                                                     |
     | PostgreSQL version     | 17                                                             |
     | Compute                | 2 vCores, if available                                         |
