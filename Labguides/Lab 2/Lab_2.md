@@ -148,7 +148,7 @@ HorizonDB rejects *CREATE EXTENSION* unless the extension is listed in the azure
 
     >[!Alert] If the initial deployment fails, select **Re-Deploy** and edit the **parameters** line by removing all existing content and replacing with:
     >
-    > +++[{ "name": "azure.extensions", "value": "azure_ai,vector,pg_diskann" }]+++
+    > `[{ "name": "azure.extensions", "value": "azure_ai,vector,pg_diskann" }]`
     >
     >Make sure the Resource group is selected, then select **Review + Create**.
     
