@@ -128,7 +128,11 @@ HorizonDB rejects *CREATE EXTENSION* unless the extension is listed in the azure
 
     ![Screenshot](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%202/media/image19.png)
 
-1. On the parameters page, filter for `azure.extensions` and from the parameter drop down select the following values: azure_ai, vector, pg_diskann
+1. On the parameters page, filter for `azure.extensions` and from the parameter drop down select the following values:
+  
+    - **azure_ai**
+    - **vector**
+    - **pg_diskann**
 
     ![Screenshot](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%202/media/image20.png)
 
@@ -142,7 +146,7 @@ HorizonDB rejects *CREATE EXTENSION* unless the extension is listed in the azure
 
     ![Screenshot](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%202/media/image24.png)
 
-    >[Alert] If the initial deployment fails, select **Re-Deploy** and edit the **parameters** line by removing all existing content and replacing with:
+    >[!Alert] If the initial deployment fails, select **Re-Deploy** and edit the **parameters** line by removing all existing content and replacing with:
     >
     > `[{ "name": "azure.extensions", "value": "azure_ai,vector,pg_diskann" }]
     >
