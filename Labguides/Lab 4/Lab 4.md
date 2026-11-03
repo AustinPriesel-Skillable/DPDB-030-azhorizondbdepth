@@ -1,66 +1,302 @@
 # Lab 4 — Build a GraphRAG Legal Research Agent on Azure HorizonDB
 
+### Estimate duration: 60 min
+
 ## Lab scenario
 
-Calder & Voss LLP is a law firm that advises employers. Its associates research questions such as Can a court narrow an overbroad non-compete instead of striking it down? The answer is rarely in one document. It sits in a chain of court opinions that cite each other, in firm research memos that summarize them, and in matter notes that apply them to a client.
+Calder & Voss LLP is a law firm that advises employers on complex legal matters. Its associates frequently research questions such as whether a court can narrow an overbroad non-compete agreement instead of striking it down. Answering these questions requires more than finding a single relevant document. Associates must examine related court opinions, trace legal citations, review internal research memos, and consider matter-specific notes to build a complete and well-supported understanding.
 
-A plain vector search finds the single closest document. It does not know that other documents are connected to it by citation. In this lab you combine three things in one PostgreSQL database:
-
-1. **Vector search** (pgvector) finds the document closest to the question.
-1. **A citation graph** (Apache AGE) finds the cases it relies on and the later documents that rely on it.
-1. **The relational table** holds the authoritative text of every document.
-
-    Then you wrap these as tools for an agent. The agent decides which tool to call, remembers the conversation in HorizonDB, and answers only from what the tools return. This pattern is called GraphRAG. It follows the approach of the GraphRAG Legal Research Copilot sample (https://github.com/Azure-Samples/graphrag-legalcases-postgres), scaled down to fit a 60-minute lab.
-
+In this lab, you build a GraphRAG-based Legal Research Agent using Azure HorizonDB that combines vector search, an Apache AGE citation graph, and relational document storage. You register your own embedding and chat models, create SQL functions for model access, and connect document retrieval with graph-based citation expansion. You then build a Python tool-calling agent that uses these capabilities to retrieve relevant legal evidence, maintain persistent conversation memory, and generate answers grounded in the available research library.
 
 ## Learning objectives
 
-After this lab you can:
+After completing this lab, you will be able to:
 
-1. Wrap managed AI models in SQL functions so applications never call model functions directly.
-1. Combine vector similarity and graph traversal in one retrieval flow, with no hardcoded document IDs.
-1. Query an Apache AGE graph from a SQL function.
-1. Build a tool-calling agent in Python that uses HorizonDB for retrieval and persistent memory.
-1. Check that an agent's answers are grounded in retrieved documents.
+1. Register AI models and create SQL wrapper functions in HorizonDB.
+1. Combine vector search and Apache AGE graph traversal for document retrieval.
+1. Build SQL-based GraphRAG retrieval workflows.
+1. Develop a Python tool-calling agent with persistent conversation memory.
+1. Validate agent responses using retrieved documents and citation relationships.
 
 
 ## Exercise 0: Environment setup
 
 ### Task 1: Create the cluster
 
-1. In the Azure portal, search for Azure HorizonDB, select Azure HorizonDB (Preview), then select Create. Do not choose Azure Database for PostgreSQL Flexible Server.
+1. Open a web browser and navigate to +++ +++https://portal.azure.com/+++.
+
+1. Sign in to the Azure portal using the following credentials: 
+    
+    Username - +++@lab.CloudPortalCredential(User1).Username+++ 
+    
+    TAP Token - +++@lab.CloudPortalCredential(User1).AccessToken+++
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image1.png)
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image2.png)
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image3.png)
+
+1. In the search box at the top of the page, enter `Azure HorizonDB`. Under Services, select **Azure HorizonDB**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image4.png)
+
+1. Select **Create**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image5.png)
+
 1. Use these values and leave everything else at its default.
 
-    | Setting | Value |
-    |---|---|
-    | Resource group | @lab.CloudResourceGroup(ResourceGroup1).Name |
-    | Cluster name | `legalai-hdb-lab-@lab.labinstance.id` |
-    | Region | @lab.CloudResourceGroup(ResourceGroup1).Location |
-    | PostgreSQL version | 17 |
-    | Compute | 4 vCores if available (2 vCores also works, but Lab 6 runs slower) |
-    | High availability | Disabled |
-    | Authentication | PostgreSQL authentication |
-    | Administrator username | +++lawadmin+++ |
-    | Password | +++Pass@1234+++ |
-    | Networking | Public access, allow Azure services, add the client IP address |
+    | **Setting**            | **Value**                          |
+    |------------------------|------------------------------------|
+    | Resource group         | @lab.CloudResourceGroup(ResourceGroup1).Name                     |
+    | Cluster name           | `legalai-hdb-lab@lab.LabInstance.Id` |
+    | Region                 | @lab.CloudResourceGroup(ResourceGroup1).Location                         |
+    | PostgreSQL version     | 17                                 |
+    | Compute                | Select Configure -> 4 vCores       |
+    | High availability      | Disabled                           |
+    | Authentication         | PostgreSQL authentication          |
+    | Administrator username | +++lawadmin+++                     |
+    | Password               | +++Pass@1234+++                    |
 
-1. Select Create and wait 5 to 10 minutes. Copy the Cluster endpoint.
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image6.png)
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image7.png)
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image8.png)
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image9.png)
+
+1. On the **Networking** tab, make sure the connectivity method is **Public access**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image10.png)
+
+1. Under firewall rules, enable **Allow public access from any Azure service within Azure to this cluster**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image11.png)
+
+1. Select **Add current client IP address** to add your current public IP address to the firewall rules. Select **Review + create**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image12.png)
+
+1. Select **Create** and wait 10 to 15 minutes to complete the deployment.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image13.png)
+
+1. Select **Go to resource group** -> **HorizonDB cluster** and copy the **Cluster endpoint**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image14.png)
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image15.png)
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image16.png)
 
 
-### Task 2: Create and attach the parameter group
+### Task 2: Prepare your own models (bring your own model)
 
-1. Open the cluster, select Settings > Parameters, then next to Parameter group select (create).
-1. Name it legalai-pg, region Central US, PostgreSQL 17, base group PostgreSQL 17.
-1. Enable these values for azure.extensions: azure_ai, vector, pg_diskann, age.
-1. Enable age for shared_preload_libraries.
-1. Create the group, attach it to the cluster (change > legalai-pg), and wait for the automatic restart to finish.
+1. In the Azure portal, open **Microsoft Foundry**.
 
-    >[!Important] If age is not preloaded, the first Cypher query fails with unhandled cypher(cstring) function call error. Do not run LOAD 'age';.
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image17.png)
+
+1. From the left navigation expand **All models, agents and tools**->select **Microsoft Foundry**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image18.png)
+
+1. Select **Create**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image19.png)
+
+1. Enter the following details to create a Foundry project:
+
+    | Setting              | Suggested value             |
+    |----------------------|-----------------------------|
+    | Resource Group       | @lab.CloudResourceGroup(ResourceGroup1).Name              |
+    | Name                 | `Foundry-@lab.LabInstance.Id` |
+    | Region               | @lab.CloudResourceGroup(ResourceGroup1).Location                     |
+    | Default Project Name | project@lab.LabInstance.Id  |
+
+    Select **Review+create**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image20.png)
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image21.png)
+
+1. Select **Create**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image22.png)
+
+1. Select **Go to resource**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image23.png)
+
+1. Select **Go to Foundry portal**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image24.png)
+
+1. In the Use model section select **view deployments**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image25.png)
+
+1. Select **Deploy a base model**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image26.png)
+
+1. Search `text-embedding` in the search bar. Then select **text-embedding-3-small** model.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image27.png)
+
+1. Select Deploy->Custom settings.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image28.png)
+
+1. Increase Tokens per minute rate limit to 3.17M. Now select **Deploy.**
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image29.png)
+
+1. Save the value of Endpoint and key in the notepad you will use them in the upcoming tasks.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image30.png)
+
+1. Now deploy chat model. Select **Deploy a base model.**
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image31.png)
+
+1. So search for `gpt-5.1` in the search bar and then select gpt-5.1 model from the search result.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image32.png)
+
+1. Select Deploy ->Custom settings
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image33.png)
+
+1. Increase Tokens per minute rate limit to **15.29M**. Select **Deploy**
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image34.png)
+
+1. Save the Endpoint and key values in the notepad we will use them in the upcoming task.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image35.png)
 
 
-### Task 3: Enable managed AI models
+### Task 3: Create and attach the parameter group
 
-Open AI model manager in the cluster menu, select Enable managed models, save, and accept the terms. The default-embedding alias and the default chat model become available.
+This task creates a parameter group that enables the extensions the lab needs, then attaches it to the cluster. It sets only two parameters, and every other setting keeps its default.
+
+Use Azure Cloud Shell (Bash) or any terminal with the Azure CLI installed.
+
+1. Open **Cloud Shell** from the Azure portal toolbar. Select **Bash**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image36.png)
+
+1. Select **No storage account required**, select your subscription, and then select **Apply**. Wait for Azure Cloud Shell to initialize.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image37.png)
+
+1. Run the following command to login into azure:
+
+    `az login`
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image38.png)
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image39.png)
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image40.png)
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image41.png)
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image42.png)
+
+1. Enter `1` and press enter.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image43.png)
+
+1. Set the names you will use in the following commands. Replace the cluster name if yours is different.
+
+    ```bash
+    RG="ResourceGroup1"
+    CLUSTER="legalai-hdb-lab@lab.LabInstance.Id"
+    PG="legalai-pg"
+    ```
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image44.png)
+
+1. Create the parameter group.
+
+    ```bash
+    az horizondb parameter-group create \
+      --name $PG \
+      --resource-group $RG \
+      --location centralus \
+      --version 17 \
+      --parameters "azure.extensions=age,azure_ai,pg_diskann,vector" "shared_preload_libraries=age" \
+      --apply-immediately true \
+      --description "Lab 4 AGE and vector settings"
+    ```
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image45.png)
+
+1. Enter`y`
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image46.png)
+
+1. Check that the group was created.
+
+    `az horizondb parameter-group show --name $PG --resource-group $RG`
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image47.png)
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image48.png)
+
+1. Attach the parameter group to the cluster. The cluster restarts automatically, which can take several minutes.
+
+    ```bash
+    SUB=$(az account show --query id -o tsv)
+
+    az horizondb update \
+      --name $CLUSTER \
+      --resource-group $RG \
+      --parameter-group "/subscriptions/$SUB/resourceGroups/$RG/providers/Microsoft.HorizonDb/parameterGroups/$PG"
+    ```
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image49.png)
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image50.png)
+
+1. Confirm the cluster is connected to the group.
+
+    `az horizondb parameter-group list-connections --name $PG --resource-group $RG`
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image51.png)
+
+    Your cluster name should appear in the output.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image52.png)
+
+1. After the restart finishes, connect with psql. Replace `<CLUSTER_ENDPOINT>` with the cluster endpoint from the portal and enter the administrator password when prompted.
+
+    `psql "host=<CLUSTER_ENDPOINT> port=5432 dbname=postgres user=lawadmin sslmode=require"`
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image53.png)
+
+1. Enter password as +++Pass@1234+++.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image54.png)
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image55.png)
+
+1. Run these queries:
+
+    ```sql
+    SHOW azure.extensions;
+    SHOW shared_preload_libraries;
+    ```
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image56.png)
+
+    **Expected result:** azure.extensions shows age,azure_ai,pg_diskann,vector, and shared_preload_libraries includes age.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image57.png)
+
 
 ### Task 4: Create the lab database and extensions
 
@@ -68,9 +304,49 @@ Open AI model manager in the cluster menu, select Enable managed models, save, a
 
     `CREATE DATABASE legalai_lab;`
 
-1. Open a new connection to legalai_lab and run:
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image58.png)
 
-    ```
+1. Enter `\q` to terminate the connection:
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image59.png)
+
+1. Open Visual Studio code and navigate to PostgreSQL extension.
+
+    >[!Note] If the PostgresSQL extension is not available in the VS code go to extensions->search for PostgresSQL->select install.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image60.png)
+
+1. Select **+Add connection**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image61.png)
+
+1. Enter the following connection details:
+
+    | Setting      | Suggested value                                              |
+    |--------------|--------------------------------------------------------------|
+    | Server name  | Primary endpoint of the cluster which we saved in Exercise 0 |
+    | Username     | +++lawadmin+++                                               |
+    | Password     | +++Pass@1234+++                                              |
+    | Database     | legalai_lab                                                  |
+    | Server Group | Servers                                                      |
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image62.png)
+
+1. Select **Test connection** to check the connection.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image63.png)
+
+1. After running Test connection successfully select **Save & Connect**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image64.png)
+
+1. Select **New Query**.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image65.png)
+
+1. Enter the following query to create new extensions and then select Play button to run the query:
+
+    ```sql
     CREATE EXTENSION IF NOT EXISTS vector;
     CREATE EXTENSION IF NOT EXISTS pg_diskann CASCADE;
     CREATE EXTENSION IF NOT EXISTS azure_ai;
@@ -82,46 +358,121 @@ Open AI model manager in the cluster menu, select Enable managed models, save, a
     ORDER BY extname;
     ```
 
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image66.png)
+
     **Expected result:** all four extensions are listed.
 
-## Exercise 1: Load the research library and build the citation graph (15 minutes)
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image67.png)
 
-All statements in Exercises 1 and 2 run in legalai_lab.
 
-### Task 1: Wrap the AI models in SQL functions
+## Exercise 1: Load the research library and build the citation graph
 
-1. The application never calls the model functions directly. It calls two small wrappers. In Lab 7 you lock these down so users cannot call the models themselves, and if you use your own models you only change them here.
+### Task 1: Register your models and wrap them in SQL functions
 
+The application never calls the model functions directly. First, you register your own models in the database, then you create two small wrappers. In Lab 7 you lock these wrappers down so users cannot call the models themselves, and if you change models later you only change them here.
+
+1. To Register the embedding model, replace the placeholders with the values recorded during Exercise 0, Task 2. Use NULL for the API version to use the latest supported version.
+
+    ```sql
+    SELECT model_registry.model_add(
+        'my-embedding',                              -- model alias
+        'https://<your-foundry-resource>.services.ai.azure.com/', -- endpoint URL
+        'text-embedding-3-small',               -- deployment name
+        'text-embedding-3-small',                    -- model name
+        NULL,                                        -- API version
+        'subscription-key',                          -- authentication type
+        '<your-api-key>'                             -- API key
+    );
     ```
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image68.png)
+
+1. Similarly Register the chat model
+
+    ```sql
+    SELECT model_registry.model_add(
+        'my-chat',                                   -- model alias
+        'https://<your-foundry-resource>.services.ai.azure.com/', -- endpoint URL
+        'gpt-5.1',                     -- deployment name
+        'gpt-5.1',                                   -- model name
+        NULL,                                        -- API version
+        'subscription-key',                          -- authentication type
+        '<your-api-key>'                             -- API key
+    );
+    ```
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image69.png)
+
+1. Run the following query to verify model registration
+
+    ```sql
+    SELECT *
+    FROM model_registry.model_list_all();
+    ```
+
+    Expected result: Both my-embedding and my-chat appear in the model registry, with their corresponding deployment names and model information.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image70.png)
+
+1. Create the legal schema and the two wrapper functions. These functions provide a consistent interface for the application, regardless of which registered models are used.
+
+    ```sql
     CREATE SCHEMA IF NOT EXISTS legal;
 
     CREATE OR REPLACE FUNCTION legal.embed(p_text text)
     RETURNS vector
     LANGUAGE sql STABLE
-    AS $$ SELECT azure_openai.create_embeddings(input => p_text)::vector $$;
+    AS $$
+        SELECT azure_openai.create_embeddings(
+            'my-embedding',
+            p_text
+        )::vector
+    $$;
 
-    CREATE OR REPLACE FUNCTION legal.llm(p_prompt text, p_system text)
+    CREATE OR REPLACE FUNCTION legal.llm(
+        p_prompt text,
+        p_system text
+    )
     RETURNS text
     LANGUAGE sql
-    AS $$ SELECT azure_ai.generate(prompt => p_prompt, system_prompt => p_system)::text $$;
+    AS $$
+        SELECT azure_ai.generate(
+            prompt => p_prompt,
+            system_prompt => p_system,
+            model => 'my-chat'
+        )::text
+    $$;
     ```
 
-1. Test both:
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image71.png)
 
+1. Run the following queries to test both functions.
+
+    **Query 1:**
+
+    `SELECT vector_dims(legal.embed('test'));`
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image72.png)
+
+    **Query 2:**
+
+    ```sql
+    SELECT legal.llm(
+        'Reply with exactly: HorizonDB AI test successful',
+        'You are a validation assistant.'
+    );
     ```
-    SELECT vector_dims(legal.embed('test'));
-    SELECT legal.llm('Reply with exactly: HorizonDB AI test successful', 'You are a validation assistant.');
-    ```
 
-    **Expected result:** 1536, then a short text reply.
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image73.png)
 
-    >[!Note] (Option B, your own models): register your embedding model as my-embedding and your chat model under an alias, as in Day 1 Lab 2. Then change the function bodies to azure_openai.create_embeddings('my-embedding', p_text)::vector and add model => '<your chat alias>' to azure_ai.generate. Nothing else in Labs 5 to 7 changes. Check the exact argument names with your instructor, because preview signatures can change.
 
 ### Task 2: Create and load the document table
 
-1. The library has three kinds of documents: published court opinions, firm research memos and privileged matter notes. The classification column is used in Lab 7.
+The library has three kinds of documents: published court opinions, firm research memos and privileged matter notes.
 
-    ```
+1. Run the following query:
+
+    ```sql
     CREATE TABLE legal.documents (
         doc_id         text PRIMARY KEY,
         title          text NOT NULL,
@@ -149,12 +500,13 @@ All statements in Exercises 1 and 2 run in legalai_lab.
 
     **Expected result:** 12 rows inserted.
 
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image74.png)
+
 ### Task 3: Generate embeddings
 
+1. This step calls your embedding model once for each document.
 
-1. Run the following query:
-
-    ```
+    ```sql
     UPDATE legal.documents
     SET embedding = legal.embed(title || '. ' || content)
     WHERE embedding IS NULL;
@@ -163,13 +515,15 @@ All statements in Exercises 1 and 2 run in legalai_lab.
     FROM legal.documents;
     ```
 
-    **Expected result:** 12 and 12. If the counts differ, check Task 1 and the model setup before you continue.
+    **Expected result:** 12 and 12. If the counts differ, check Task 1 and your model registration before you continue.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image75.png)
 
 ### Task 4: Build the citation graph
 
 1. The graph holds only document IDs and CITES edges (an edge from A to B means A cites B). The relational table stays the source of truth for the text. Run the CREATE statement once, because a second run creates duplicates.
 
-    ```
+    ```sql
     SET search_path = ag_catalog, "$user", public;
 
     SELECT create_graph('legal_graph');
@@ -197,97 +551,111 @@ All statements in Exercises 1 and 2 run in legalai_lab.
         (n1)-[:CITES]->(m1), (n1)-[:CITES]->(c2), (n1)-[:CITES]->(c6),
         (n2)-[:CITES]->(c3), (n2)-[:CITES]->(m2),
         (n3)-[:CITES]->(c6), (n3)-[:CITES]->(m1)
+        RETURN c1
     $$) AS (result agtype);
     ```
 
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image76.png)
+
 1. Verify the graph:
 
-    ```
+    ```sql
     SELECT * FROM cypher('legal_graph', $$ MATCH (n) RETURN count(n) $$) AS (vertices agtype);
+
     SELECT * FROM cypher('legal_graph', $$ MATCH ()-[r]->() RETURN count(r) $$) AS (edges agtype);
     ```
 
     **Expected result:** 12 vertices and 20 edges.
 
-    >[!Note] Every cypher() call needs an AS (...) clause with one agtype column for each returned value. If a statement fails with a cypher function error, check that age is preloaded (Exercise 0, Task 2).
+![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image77.png)
 
-Checkpoint: You have 12 embedded documents and a graph that records which document cites which.
+![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image78.png)
 
-## Exercise 2: Retrieve with vectors, then expand with the graph (15 minutes)
+>[!Note] Every cypher() call needs an AS (...) clause with one agtype column for each returned value. If a statement fails with a cypher function error, check that age is preloaded (Exercise 0, Task 2).
+>
+> **Checkpoint:** You have 12 embedded documents and a graph that records which document cites which.
+
+## Exercise 2: Retrieve with vectors, then expand with the graph
 
 ### Task 1: Vector search alone
 
-1. Run the following query:
+```sql
+SELECT doc_id, title,
+       ROUND((embedding <=> legal.embed('Can a court narrow an overbroad non-compete instead of striking it down?'))::numeric, 4) AS distance
+FROM legal.documents
+ORDER BY distance
+LIMIT 3;
+```
 
-    ```
-    SELECT doc_id, title,
-        ROUND((embedding <=> legal.embed('Can a court narrow an overbroad non-compete instead of striking it down?'))::numeric, 4) AS distance
-    FROM legal.documents
-    ORDER BY distance
-    LIMIT 3;
-    ```
+**Expected result:** CASE-002 (Brightwater Logistics v. Harlan) is first or near the top. The case it builds on, CASE-001, and the later cases that apply it may rank lower or not appear, even though a complete answer needs them. This is the gap the graph fills.
 
-    **Expected result:** CASE-002 (Brightwater Logistics v. Harlan) is first or near the top. The case it builds on, CASE-001, and the later cases that apply it may rank lower or not appear, even though a complete answer needs them. This is the gap the graph fills.
+![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image79.png)
 
 ### Task 2: Create the graph lookup functions
 
-The first function runs the openCypher queries. AGE needs a literal query string, so the function builds the full statement with format() and runs it with EXECUTE. It checks the ID format first. It returns documents that the starting document cites and documents that cite it.
+1. The first function runs the openCypher queries. AGE needs a literal query string, so the function builds the full statement with format() and runs it with EXECUTE. It checks the ID format first. It returns documents that the starting document cites and documents that cite it.
 
-```
-CREATE OR REPLACE FUNCTION legal.graph_neighbors(p_doc_id text)
-RETURNS TABLE (doc_id text, relation text)
-LANGUAGE plpgsql
-SET search_path = ag_catalog, legal, public
-AS $fn$
-BEGIN
-    IF p_doc_id !~ '^(CASE|MEMO|NOTE)-[0-9]{3}$' THEN
-        RAISE EXCEPTION 'Invalid document id: %', p_doc_id;
-    END IF;
-    RETURN QUERY EXECUTE format($q$
-        SELECT trim(both '"' FROM g.nid::text), trim(both '"' FROM g.rel::text)
-        FROM ag_catalog.cypher('legal_graph', $c$
-            MATCH (a:Document {doc_id: %1$L})-[:CITES]->(b:Document)
-            RETURN b.doc_id, 'cites'
-        $c$) AS g(nid ag_catalog.agtype, rel ag_catalog.agtype)
-        UNION ALL
-        SELECT trim(both '"' FROM g.nid::text), trim(both '"' FROM g.rel::text)
-        FROM ag_catalog.cypher('legal_graph', $c$
-            MATCH (b:Document)-[:CITES]->(a:Document {doc_id: %1$L})
-            RETURN b.doc_id, 'cited_by'
-        $c$) AS g(nid ag_catalog.agtype, rel ag_catalog.agtype)
-    $q$, p_doc_id);
-END;
-$fn$;
-```
+    ```sql
+    CREATE OR REPLACE FUNCTION legal.graph_neighbors(p_doc_id text)
+    RETURNS TABLE (doc_id text, relation text)
+    LANGUAGE plpgsql
+    SET search_path = ag_catalog, legal, public
+    AS $fn$
+    BEGIN
+        IF p_doc_id !~ '^(CASE|MEMO|NOTE)-[0-9]{3}$' THEN
+            RAISE EXCEPTION 'Invalid document id: %', p_doc_id;
+        END IF;
+        RETURN QUERY EXECUTE format($q$
+            SELECT trim(both '"' FROM g.nid::text), trim(both '"' FROM g.rel::text)
+            FROM ag_catalog.cypher('legal_graph', $c$
+                MATCH (a:Document {doc_id: %1$L})-[:CITES]->(b:Document)
+                RETURN b.doc_id, 'cites'
+            $c$) AS g(nid ag_catalog.agtype, rel ag_catalog.agtype)
+            UNION ALL
+            SELECT trim(both '"' FROM g.nid::text), trim(both '"' FROM g.rel::text)
+            FROM ag_catalog.cypher('legal_graph', $c$
+                MATCH (b:Document)-[:CITES]->(a:Document {doc_id: %1$L})
+                RETURN b.doc_id, 'cited_by'
+            $c$) AS g(nid ag_catalog.agtype, rel ag_catalog.agtype)
+        $q$, p_doc_id);
+    END;
+    $fn$;
+    ```
 
-The second function adds titles from the relational table. It lists the documents that the starting document cites first (the authority it rests on), then the documents that cite it:
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image80.png)
 
-```
-CREATE OR REPLACE FUNCTION legal.related_docs(p_doc_id text, p_limit int DEFAULT 4)
-RETURNS TABLE (doc_id text, title text, relation text)
-LANGUAGE sql STABLE
-AS $$
-    SELECT d.doc_id, d.title, n.relation
-    FROM legal.graph_neighbors(p_doc_id) AS n
-    JOIN legal.documents AS d ON d.doc_id = n.doc_id
-    ORDER BY (n.relation = 'cites') DESC, d.doc_id
-    LIMIT p_limit;
-$$;
-```
+1. The second function adds titles from the relational table. It lists the documents that the starting document cites first (the authority it rests on), then the documents that cite it:
+
+    ```sql
+    CREATE OR REPLACE FUNCTION legal.related_docs(p_doc_id text, p_limit int DEFAULT 4)
+    RETURNS TABLE (doc_id text, title text, relation text)
+    LANGUAGE sql STABLE
+    AS $$
+        SELECT d.doc_id, d.title, n.relation
+        FROM legal.graph_neighbors(p_doc_id) AS n
+        JOIN legal.documents AS d ON d.doc_id = n.doc_id
+        ORDER BY (n.relation = 'cites') DESC, d.doc_id
+        LIMIT p_limit;
+    $$;
+    ```
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image81.png)
 
 ### Task 3: Test the graph expansion
 
-`SELECT * FROM legal.related_docs('CASE-002', 4);`
+1. Run the following query: 
 
-Expected result: CASE-001 (cites), then CASE-004, CASE-005 and MEMO-002 (cited_by). A fifth neighbor, NOTE-001, is cut by the limit of 4. Brightwater rests on Alder and was applied by later cases and memos, and the graph shows that in one query.
+    `SELECT * FROM legal.related_docs('CASE-002', 4);`
+
+    **Expected result:** CASE-001 (cites), then CASE-004, CASE-005 and MEMO-002 (cited_by). A fifth neighbor, NOTE-001, is cut by the limit of 4. Brightwater rests on Alder and was applied by later cases and memos, and the graph shows that in one query.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image82.png)
 
 ### Task 4: Combine both steps in one function
 
-The vector hit is the starting point, and the graph supplies the connected authority. No document ID is typed by hand.
+1. The vector hit is the starting point, and the graph supplies the connected authority. No document ID is typed by hand.
 
-1. Run the following query:
-
-    ```
+    ```sql
     CREATE OR REPLACE FUNCTION legal.graphrag_retrieve(p_question text, p_expand int DEFAULT 3)
     RETURNS TABLE (doc_id text, title text, found_by text, detail text)
     LANGUAGE sql STABLE
@@ -312,37 +680,28 @@ The vector hit is the starting point, and the graph supplies the connected autho
 
     **Expected result:** CASE-002 found by vector, then CASE-001, CASE-004 and CASE-005 found by graph. The text of the case, the authority it rests on, and the cases that applied it are now available as evidence.
 
-### Task 5: Compare
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image83.png)
 
-1. Run the function again with: `What is the reasonableness test for non-competes, and which later documents rely on it?`
-
-Answer these questions with your instructor:
-
-1. Which document does the vector search find first, and which ones does the graph add?
-1. Why is the text read from the relational table and not stored in the graph?
-1. What would break if the starting document were wrong? (Retrieval quality depends on the vector step.)
-
-    Checkpoint: You have a SQL-only GraphRAG retrieval flow. Next, an agent chooses these steps for itself.
-
+**Checkpoint:** You have a SQL-only GraphRAG retrieval flow. Next, an agent chooses these steps for itself.
 
 ## Exercise 3: Build the legal research agent
 
-1. The agent has four tools. The model picks one at a time by replying with a small JSON message, the Python program runs the tool against HorizonDB, and the result goes back to the model. This uses only the in-database models from Exercise 1, so no extra model keys are needed.
+The agent has four tools. The model picks one at a time by replying with a small JSON message, the Python program runs the tool against HorizonDB, and the result goes back to the model. The model calls go through legal.llm from Exercise 1, which uses the bring-your-own chat model you registered. The Python program never holds a model key. It only needs the database connection.
 
-    | Tool | What it does |
-    |---|---|
-    | search_documents | Vector search: the 3 closest documents |
-    | find_related_documents | Citation graph expansion from one document (legal.related_docs) |
-    | get_document | Full text of one document |
-    | recall_memory | Recent messages from this session |
+| **Tool**               | **What it does**                                                |
+|------------------------|-----------------------------------------------------------------|
+| search_documents       | Vector search: the 3 closest documents                          |
+| find_related_documents | Citation graph expansion from one document (legal.related_docs) |
+| get_document           | Full text of one document                                       |
+| recall_memory          | Recent messages from this session                               |
 
-    The model never receives SQL access. It can only name one of these four tools.
+The model never receives SQL access. It can only name one of these four tools.
 
 ### Task 1: Create the memory table
 
-1. Run the following query:
+1. Run the following query: 
 
-    ```
+    ```sql
     CREATE TABLE legal.agent_messages (
         message_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
         session_id text NOT NULL,
@@ -355,247 +714,195 @@ Answer these questions with your instructor:
     CREATE INDEX ix_agent_messages_session ON legal.agent_messages (session_id, message_id);
     ```
 
-User questions, agent answers and every tool result are stored. This gives you a conversation memory and an audit trail.
+    >[!Knowledge] User questions, agent answers and every tool result are stored. This gives you a conversation memory and an audit trail.
 
-### Task 2: Set up Python
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image84.png)
 
-1. In a terminal:
+### Task 2: Open agent.py
 
-    ```
-    mkdir legal-agent
-    cd legal-agent
+1. Navigate to C:\Labfiles and open agent.py in your VS code.
+
+1. Select 3-dots(…) from the top left navigation bar and then select Terminal->New terminal.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image85.png)
+
+1. Execute the following commands one by one in the terminal:
+
+    ```powershell
+    cd "C:\Lab Files"
     python3 -m venv .venv
-    source .venv/bin/activate
-    pip install --upgrade pip
-    pip install "psycopg[binary]"
+    .\.venv\Scripts\Activate.ps1
+    python -m pip install --upgrade pip
+    python -m pip install "psycopg[binary]"
     ```
 
-1. On Windows PowerShell, activate with .venv\Scripts\Activate.ps1. Then set the connection details. Replace the placeholders with your values and do not share the password.
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image86.png)
 
+1. Then set the connection details. Replace the placeholders with your values which we save in Exercise 0.
+
+    ```powershell
+    $env:HORIZONDB_DSN = 'host=<CLUSTER_ENDPOINT> port=5432 dbname=legalai_lab user=lawadmin password=Pass@1234 sslmode=require'
+    $env:AGENT_SESSION_ID = 'lab4-demo'
     ```
-    export HORIZONDB_DSN='host=<CLUSTER_ENDPOINT> port=5432 dbname=legalai_lab user=lawadmin password=<PASSWORD> sslmode=require'
-    export AGENT_SESSION_ID='lab5-demo'
-    ```
 
-1. On Windows PowerShell, use `$env:HORIZONDB_DSN = '...' and $env:AGENT_SESSION_ID = 'lab5-demo'`.
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image87.png)
 
-### Task 3: Create agent.py
 
-1. Create a file named agent.py with this content:
+### Task 3: Explore how the Legal Research Agent works
+
+The supplied agent.py file contains the complete implementation of the Legal Research Agent. Review the following five code sections to understand how the agent works before running it.
+
+1. The following code configures the Legal Research Agent and defines its available tools.
 
     ```python
-    import json
-    import os
-    import re
-    import uuid
-
-    import psycopg
-
-    DSN = os.environ['HORIZONDB_DSN']
-    SESSION_ID = os.getenv('AGENT_SESSION_ID', 'session-' + uuid.uuid4().hex[:8])
+    DSN = os.environ["HORIZONDB_DSN"]
+    SESSION_ID = os.getenv(
+        "AGENT_SESSION_ID",
+        "session-" + uuid.uuid4().hex[:8])
     MAX_STEPS = 5
-    DOC_ID = re.compile('^(CASE|MEMO|NOTE)-[0-9]{3}$')
-    NL = chr(10)
-
-    TOOL_CATALOG = '''
-    1. search_documents - args: {"query": "<text>"}
-    Semantic search. Returns the 3 closest documents.
-    2. find_related_documents - args: {"doc_id": "CASE-001"}
-    Follows the citation graph: returns documents that the given document cites and documents that cite it.
-    3. get_document - args: {"doc_id": "CASE-001"}
-    Returns the full text of one document.
-    4. recall_memory - args: {"limit": <number>}
-    Returns the most recent messages from this session.
-    '''
-
-    SYSTEM_PROMPT = '''You are the Calder & Voss Legal Research Agent.
-    You answer legal research questions using ONLY text returned by your tools.
-
-    Tools:
-    ''' + TOOL_CATALOG + '''
-    Reply with exactly ONE JSON object and nothing else, in one of these forms:
-    {"action": "tool", "tool": "<tool name>", "args": {}}
-    {"action": "answer", "answer": "<final answer>", "sources": ["CASE-001"]}
-
-    Rules:
-    - Start with search_documents for any research question.
-    - Use find_related_documents to trace the authority a case rests on and the documents that apply it.
-    - Use recall_memory when the user refers to earlier messages.
-    - Never invent case names, holdings, citations or years. If the tools do not contain the answer, say the information is not in the research library.
-    - Say whether each point comes from a court opinion (CASE), a firm memo (MEMO) or a matter note (NOTE).
-    - In the final answer, cite the document ID and title for each claim, and list the document IDs in sources.
-    '''
-
-    SEARCH_SQL = '''
-    WITH q AS (SELECT legal.embed(%s::text) AS v)
-    SELECT d.doc_id, d.title, d.doc_type, ROUND((d.embedding <=> q.v)::numeric, 4), LEFT(d.content, 160)
-    FROM legal.documents AS d, q
-    ORDER BY d.embedding <=> q.v
-    LIMIT 3
-
-
-    def tool_search_documents(conn, args):
-        query = str(args.get('query', '')).strip()
-        if not query:
-            return 'Error: query is required.'
-        rows = conn.execute(SEARCH_SQL, (query,)).fetchall()
-        lines = [f'{r[0]} | {r[1]} | {r[2]} | distance {r[3]} | {r[4]}...' for r in rows]
-        return NL.join(lines) or 'No documents found.'
-
-
-    def tool_find_related(conn, args):
-        doc_id = str(args.get('doc_id', '')).strip()
-        if not DOC_ID.match(doc_id):
-            return 'Error: doc_id must look like CASE-001, MEMO-001 or NOTE-001.'
-        rows = conn.execute(
-            'SELECT doc_id, title, relation FROM legal.related_docs(%s::text, 6)',
-            (doc_id,),
-        ).fetchall()
-        meaning = {'cites': f'{doc_id} cites this document', 'cited_by': f'this document cites {doc_id}'}
-        lines = [f'{r[0]} | {r[1]} | {meaning.get(r[2], r[2])}' for r in rows]
-        return NL.join(lines) or 'No related documents found.'
-
-
-    def tool_get_document(conn, args):
-        doc_id = str(args.get('doc_id', '')).strip()
-        if not DOC_ID.match(doc_id):
-            return 'Error: doc_id must look like CASE-001, MEMO-001 or NOTE-001.'
-        row = conn.execute(
-            'SELECT doc_id, title, doc_type, decision_year, content FROM legal.documents WHERE doc_id = %s',
-            (doc_id,),
-        ).fetchone()
-        if row is None:
-            return f'No document {doc_id} was found, or you do not have access to it.'
-        return f'{row[0]} | {row[1]} | {row[2]} | {row[3]}' + NL + row[4]
-
-
-    def tool_recall_memory(conn, args):
-        try:
-            limit = max(1, min(int(args.get('limit', 6)), 20))
-        except (TypeError, ValueError):
-            limit = 6
-        rows = conn.execute(
-            '''SELECT role, content FROM (
-                SELECT message_id, role, content FROM legal.agent_messages
-                WHERE session_id = %s AND role IN ('user', 'assistant')
-                ORDER BY message_id DESC LIMIT %s) AS recent
-            ORDER BY message_id''',
-            (SESSION_ID, limit),
-        ).fetchall()
-        return NL.join(f'{r[0]}: {r[1]}' for r in rows) or 'No earlier messages.'
-
-
-    TOOLS = {
-        'search_documents': tool_search_documents,
-        'find_related_documents': tool_find_related,
-        'get_document': tool_get_document,
-        'recall_memory': tool_recall_memory,
-    }
-
-
-    def log(conn, role, content):
-        conn.execute(
-            'INSERT INTO legal.agent_messages (session_id, role, content) VALUES (%s, %s, %s)',
-            (SESSION_ID, role, content),
-        )
-
-
-    def ask_model(conn, prompt):
-        return conn.execute('SELECT legal.llm(%s::text, %s::text)', (prompt, SYSTEM_PROMPT)).fetchone()[0]
-
-
-    def parse_json(text):
-        start, end = text.find('{'), text.rfind('}')
-        if start == -1 or end <= start:
-            raise ValueError('no JSON object found')
-        return json.loads(text[start:end + 1])
-
-
-    def ask(conn, question):
-        log(conn, 'user', question)
-        scratchpad = []
-        for step in range(1, MAX_STEPS + 1):
-            prompt = ('QUESTION:' + NL + question + NL + NL + 'TOOL RESULTS SO FAR:' + NL
-                    + (NL + NL).join(scratchpad or ['(none yet)'])
-                    + NL + NL + 'Reply with one JSON object.')
-            try:
-                decision = parse_json(ask_model(conn, prompt))
-            except (ValueError, json.JSONDecodeError):
-                scratchpad.append('SYSTEM: your last reply was not valid JSON. Reply with one JSON object only.')
-                continue
-            if decision.get('action') == 'answer':
-                answer = str(decision.get('answer', '')).strip()
-                log(conn, 'assistant', answer)
-                return answer, decision.get('sources', [])
-            name = decision.get('tool')
-            args = decision.get('args')
-            args = args if isinstance(args, dict) else {}
-            tool = TOOLS.get(name)
-            if tool is None:
-                result = f'Error: unknown tool {name}.'
-            else:
-                try:
-                    result = tool(conn, args)
-                except Exception as exc:
-                    result = f'Error running {name}: {exc}'
-            print(f'  [step {step}] tool={name} args={json.dumps(args)}')
-            log(conn, 'tool', f'{name}({json.dumps(args)}) -> {result}')
-            scratchpad.append(f'TOOL {name} {json.dumps(args)} RESULT:' + NL + result)
-        message = 'I could not finish this request within the step limit.'
-        log(conn, 'assistant', message)
-        return message, []
-
-
-    def main():
-        with psycopg.connect(DSN, autocommit=True) as conn:
-            earlier = conn.execute(
-                'SELECT COUNT(*) FROM legal.agent_messages WHERE session_id = %s', (SESSION_ID,)
-            ).fetchone()[0]
-            print(f'Session {SESSION_ID} has {earlier} earlier messages. Type exit to quit.')
-            while True:
-                question = input(NL + 'You: ').strip()
-                if question.lower() in ('exit', 'quit'):
-                    break
-                if not question:
-                    continue
-                answer, sources = ask(conn, question)
-                print(NL + 'Agent: ' + answer)
-                print('Sources: ' + (', '.join(sources) or 'none'))
-
-
-    if __name__ == '__main__':
-        main()
+    DEBUG = False
     ```
 
-### Task 4: Run the agent
+    >[!Knowledge] The agent reads its HorizonDB connection details, assigns a session ID to each conversation, and limits the number of tool-execution steps. The TOOL_CATALOG defines the four tools available to the agent: search_documents, find_related_documents, get_document, and recall_memory.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image88.png)
+
+1. The following code enables GraphRAG-based legal document retrieval.
+
+    ```python
+    SEARCH_SQL = """WITH q AS (
+        SELECT legal.embed(%s::text) AS v
+    )
+    SELECT
+        d.doc_id,
+        d.title,
+        d.doc_type,
+        ROUND((d.embedding <=> q.v)::numeric, 4),
+        LEFT(d.content, 160)
+    FROM legal.documents AS d, q
+    ORDER BY d.embedding <=> q.v
+    LIMIT 3"""
+    ```
+
+    >[!Knowledge] This query converts the user's question into an embedding and finds the three most relevant legal documents using vector similarity.
+    >
+    > The agent also uses legal.related_docs() to follow citation relationships between documents and tool_get_document() to retrieve their complete content. Together, these capabilities combine vector search and graph-based retrieval to provide relevant legal context.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image89.png)
+
+1. The following code defines how the agent interacts with the model.
+
+    ```python
+    def ask_model(conn, prompt):
+        result = conn.execute(
+            """
+            SELECT legal.llm(%s::text, %s::text)
+            """,
+            (prompt, SYSTEM_PROMPT)
+        ).fetchone()
+
+        if result is None or result[0] is None:
+            raise ValueError(
+                "legal.llm returned an empty response."
+            )
+
+        return result[0]
+    ```
+
+    >[!Knowledge] The system prompt provides the model with instructions about its role, available tools, and response requirements. The model receives the user's request and determines whether to call a tool or return a final answer. The agent parses the model's JSON response and executes the requested action.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image90.png)
+
+1. The following code connects the tools and manages their execution.
+
+    ```python
+    TOOLS = {
+        "search_documents": tool_search_documents,
+        "find_related_documents": tool_find_related,
+        "get_document": tool_get_document,
+        "recall_memory": tool_recall_memory,
+    }
+    ```
+
+    >[!Knowledge] This mapping connects each tool name to its corresponding Python function. When the model requests a tool, the agent uses this mapping to execute the appropriate function, retrieve the result, and send it back to the model.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image91.png)
+
+1. The following code stores conversation history for persistent memory.
+
+    ```python
+    def log(conn, role, content):
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO legal.agent_messages
+                    (session_id, role, content)
+                VALUES (%s, %s, %s)
+                """,
+                (SESSION_ID, role, content)
+            )
+    ```
+
+    >[!Knowledge] This function stores user and assistant messages in the legal.agent_messages table, associated with the current session ID. The recall_memory tool retrieves recent messages from this table, allowing the agent to use previous conversation context even after it is restarted with the same session ID.
+
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image92.png)
+
+
+### Task 4: Test the agent
 
 1. Run `python agent.py` and ask these questions one at a time. Watch the [step] lines, because they show which tool the model chose.
 
-    | Test | Question | What you should see |
-    |---|---|---|
-    | 1 | Can a court narrow an overbroad non-compete instead of striking it down? | search_documents, then find_related_documents for CASE-002. The answer says yes, citing Brightwater (CASE-002), the Alder test it rests on (CASE-001), and later documents that applied it (for example CASE-005 and MEMO-002). |
-    | 2 | What is the reasonableness test for non-competes, and which later documents rely on it? | CASE-001 (three parts: duration, geographic area, scope of activity), then the documents that cite it (CASE-002, CASE-003, MEMO-001). |
-    | 3 | What did I ask you first in this session? | recall_memory, then the first question from this session. |
-    | 4 | Is a non-compete in the sale of a business treated differently from one in employment? | CASE-003: judged more leniently, and a five-year restriction was upheld. |
-    | 5 | What is the law on cryptocurrency taxation? | The agent says the information is not in the research library and does not invent an answer. |
+| **Test** | **Question** | **What You Should See** |
+|----------|--------------|-------------------------|
+| 1 | Can a court narrow an overbroad non-compete instead of striking it down? | search_documents followed by find_related_documents for CASE-002. The answer cites CASE-002, CASE-001, and supporting documents such as MEMO-002. |
+| 2 | What is the reasonableness test for non-competes, and which later documents rely on it? | CASE-001 and its three elements: duration, geographic area, and scope of activity. Related documents: CASE-002, CASE-003, and MEMO-001. |
+| 3 | What did I ask you first in this session? | recall_memory retrieves the conversation history and identifies the first question asked in the session. |
+| 4 | Is a non-compete in the sale of a business treated differently from one in employment? | CASE-003 explains the more lenient treatment of sale-of-business restrictions and the five-year restriction upheld. |
+| 5 | What is the law on cryptocurrency taxation? | The agent states that the research library does not contain relevant information and does not invent an answer. |
 
-The wording of answers varies between runs. Judge the tools used, the documents retrieved and the citations, not the exact sentences. If the model replies with text that is not JSON, the program asks it to try again, up to five steps.
+>[!Note] The wording of answers varies between runs, and it also depends on the chat model you deployed. Judge the tools used, the documents retrieved and the citations, not the exact sentences. If the model replies with text that is not JSON, the program asks it to try again, up to five steps.
 
->[!Note] Your agent may quote matter notes (NOTE-) in its answers, because you are connected as the administrator. Those notes are privileged client advice. Keep this in mind for Lab 7.
+![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image93.png)
+
+![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image94.png)
+
+![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image95.png)
+
+![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image96.png)
+
+![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image97.png)
+
+![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image98.png)
+
+![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image99.png)
+
+![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image100.png)
+
+>[!Note] Your agent may quote matter notes (NOTE-) in its answers, because you are connected as the administrator.
 
 ### Task 5: Check the persistent memory
 
-1. Enter exit, then run in SQL:
+1. Enter exit, then run the following query in SQL:
 
-    ```
+    ```sql
     SELECT message_id, role, LEFT(content, 100) AS content_start
     FROM legal.agent_messages
-    WHERE session_id = 'lab5-demo'
+    WHERE session_id = 'lab4-demo'
     ORDER BY message_id;
     ```
 
-    **Expected result:** your questions (user), each tool result (tool) and the answers (assistant). Restart python agent.py with the same AGENT_SESSION_ID, ask What did I ask you first in this session?, and confirm that the agent still remembers it.
+    **Expected result:** The query returns the conversation history stored in the legal.agent_messages table for the lab4-demo session. The results are displayed in chronological order using message_id, showing three types of records:
+    - **user:** Questions submitted during the conversation.
+    - **tool:** Tool executions, including the tool name, arguments, and returned results.
+    - **assistant:** Responses generated by the agent, including final answers.
 
->[!Note] This is conversation memory. The agent recalls recent messages but does not learn lasting facts about the user.
+
+    >[!Knowledge] Each record is associated with the same session ID, allowing the agent to retrieve previous interactions.
+
+![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image101.png)
 
 Checkpoint: You have a working GraphRAG agent whose tools, memory and audit trail all live in HorizonDB.
+
+## Summary
+
+In this lab, you built a GraphRAG-based Legal Research Agent on Azure HorizonDB by combining vector search, Apache AGE graph traversal, and relational document storage. You registered your own AI models, created SQL functions for model access, loaded legal documents and generated embeddings, and established citation relationships between documents. You then implemented a Python tool-calling agent that retrieves relevant legal evidence, expands its search through document relationships, and maintains persistent conversation memory using HorizonDB. Finally, you tested the agent's ability to answer legal research questions using retrieved evidence, recall previous interactions, and avoid generating unsupported answers when relevant information is unavailable.
