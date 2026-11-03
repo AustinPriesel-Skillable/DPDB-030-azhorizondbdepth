@@ -1,4 +1,4 @@
-# Lab 6 — Secure a Multi-User AI Application on Azure HorizonDB
+# Lab 6: Secure a Multi-User AI Application on Azure HorizonDB
 
 **Estimated duration:** 60 minutes
 
