@@ -1,4 +1,4 @@
-# Lab 4 — Build a GraphRAG Legal Research Agent on Azure HorizonDB
+# Lab 4: Build a GraphRAG Legal Research Agent on Azure HorizonDB
 
 ### Estimate duration: 60 min
 
