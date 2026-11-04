@@ -23,13 +23,13 @@ After completing this lab, you will be able to:
 
 ### Task 1: Create the cluster
 
-1. Open a web browser and navigate to +++ +++https://portal.azure.com/+++.
+1. Open a web browser and navigate to +++https://portal.azure.com/+++.
 
 1. Sign in to the Azure portal using the following credentials: 
     
-    Username - +++@lab.CloudPortalCredential(User1).Username+++ 
+    Username: +++@lab.CloudPortalCredential(User1).Username+++ 
     
-    TAP Token - +++@lab.CloudPortalCredential(User1).AccessToken+++
+    TAP Token: +++@lab.CloudPortalCredential(User1).AccessToken+++
 
     ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image1.png)
 
@@ -49,9 +49,9 @@ After completing this lab, you will be able to:
 
     | **Setting**            | **Value**                          |
     |------------------------|------------------------------------|
-    | Resource group         | @lab.CloudResourceGroup(ResourceGroup1).Name                     |
+    | Resource group         | @lab.CloudResourceGroup(ZAVA-Connect-RG).Name                     |
     | Cluster name           | `legalai-hdb-lab@lab.LabInstance.Id` |
-    | Region                 | @lab.CloudResourceGroup(ResourceGroup1).Location                         |
+    | Region                 | @lab.CloudResourceGroup(ZAVA-Connect-RG).Location                         |
     | PostgreSQL version     | 17                                 |
     | Compute                | Select Configure -> 4 vCores       |
     | High availability      | Disabled                           |
