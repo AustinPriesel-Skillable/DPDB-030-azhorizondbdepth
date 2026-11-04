@@ -65,9 +65,9 @@ In this exercise, you provision an Azure HorizonDB cluster for SchedPro's Manufa
     | **Setting** | **Value** |
     | --- | --- |
     | Subscription | @lab.CloudSubscription.Name |
-    | Resource group | @lab.CloudResourceGroup(ResourceGroup1).Name |
+    | Resource group | @lab.CloudResourceGroup(HorizonDB-RG).Name |
     | Cluster name | `schedpro-mes @lab.LabInstance.Id` |
-    | Region | @lab.CloudResourceGroup(ResourceGroup1).Location |
+    | Region | @lab.CloudResourceGroup(HorizonDB-RG).Location |
     | PostgreSQL version | **17** |
     | vCores | **2** |
     | High availability | **Zone redundant** |
@@ -848,7 +848,7 @@ The cluster has multiple replicas and is billed while it runs. When your session
 
 1. In the Azure portal, search for `Resource groups`
 
-1. Select ResourceGroup1 and select the horizon db cluster.
+1. Select HorizonDB-RG and select the horizon db cluster.
 
     ![Screenshot](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%209/media/image-97.png)
 
