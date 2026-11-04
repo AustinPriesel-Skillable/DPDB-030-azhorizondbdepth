@@ -56,9 +56,9 @@ In this task, you create a two-vCore HorizonDB cluster in the Azure portal.
     | **Setting** | **Value** |
     |---|---|
     | Subscription | @lab.CloudSubscription.Name |
-    | Resource group | @lab.CloudResourceGroup(ResourceGroup1).Name |
+    | Resource group | @lab.CloudResourceGroup(HorizonDB-RG).Name |
     | Cluster name | `cartwise@lab.LabInstance.Id` |
-    | Region | @lab.CloudResourceGroup(ResourceGroup1).Location |
+    | Region | @lab.CloudResourceGroup(HorizonDB-RG).Location |
     | PostgreSQL version | 17 |
     | vCores | 2 |
     | High availability | Disabled |
@@ -102,9 +102,9 @@ In this task, you create a parameter group that allows five extensions and prelo
     | **Setting** | **Value** |
     |---|---|
     | Subscription | @lab.CloudSubscription.Name |
-    | Resource group | @lab.CloudResourceGroup(ResourceGroup1).Name |
+    | Resource group | @lab.CloudResourceGroup(HorizonDB-RG).Name |
     | Parameter group name | `cartwise-pg` |
-    | Region | @lab.CloudResourceGroup(ResourceGroup1).Location (must match the cluster) |
+    | Region | @lab.CloudResourceGroup(HorizonDB-RG).Location (must match the cluster) |
     | PostgreSQL version | 17 |
     | Parameter group (base) | PostgreSQL 17 |
 
