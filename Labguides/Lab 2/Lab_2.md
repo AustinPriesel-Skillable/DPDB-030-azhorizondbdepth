@@ -183,11 +183,11 @@ In this task you deploy the models and record their details.
 
     ![Screenshot](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%202/media/image30.png)
 
-1. Open the Microsoft Foundry portal and select (or create) a project.
+1. On the left-hand side, under **All Models, Agents & Tools**, select **MS Foundry**.
 
     ![Screenshot](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%202/media/image31.png)
 
-1. Select **Create**.
+1. Select **+ Create**.
 
     ![Screenshot](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%202/media/image32.png)
 
@@ -242,7 +242,7 @@ In this task you deploy the models and record their details.
 
     ![Screenshot](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%202/media/image43.png)
 
-1. So search for `gpt-5.1` in the search bar and then select gpt-5.1 model from the search result.
+1. Search for `gpt-5.1` in the search bar and then select gpt-5.1 model from the search result.
 
     ![Screenshot](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%202/media/image44.png)
 
@@ -254,9 +254,9 @@ In this task you deploy the models and record their details.
 
     ![Screenshot](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%202/media/image46.png)
 
-1. Choose an alias for each model. This lab uses **my-embedding** for the embedding model and **my-gpt** for the chat model.
-
-    In Option B, every AI function call in Exercises 2 and 4 must pass your alias. The lab shows both variants.
+    >[!Knowledge] Optional: Choose an alias for each model. This lab uses **my-embedding** for the embedding model and **my-gpt** for the chat model.
+    >
+    >In Option B, every AI function call in Exercises 2 and 4 must pass your alias. The lab shows both variants.
 
 
 ## Exercise 1: Prepare the Fraud Intelligence Database
@@ -312,15 +312,15 @@ In this exercise, you will connect to your HorizonDB cluster, create a dedicated
 
 ### Task 2: Connect to the lab database and verify the environment
 
-1. Navigate to the HorizonDB cluster and right-click on it you will get a dropdown and select **Edit connection**.
-1. In Visual Studio Code, connect to the cluster again and select the **finsecure_lab** database.
-1. Extensions and the model registry are per database, so all remaining statements must run in finsecure_lab.
+1. In Visual Studio Code, in the left panel, navigate to the HorizonDB cluster and right-click on it you will get a dropdown and select **Edit connection**.
 
     ![Screenshot](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%202/media/image55.png)
 
 1. Enter database name as `finsecure_lab` and select **Save & Connect.** After few mins refresh the cluster.
 
     ![Screenshot](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%202/media/image56.png)
+
+    >[!Knowledge] Extensions and the model registry are per database, so all remaining statements must run in finsecure_lab.
 
 1. Open a new SQL query window and run the following command to verify the current database.:
 
