@@ -110,10 +110,10 @@ After completing this lab, you will be able to:
 
     | Setting              | Suggested value             |
     |----------------------|-----------------------------|
-    | Resource Group       | @lab.CloudResourceGroup(ResourceGroup1).Name              |
+    | Resource Group       | @lab.CloudResourceGroup(ZAVA-Connect-RG).Name              |
     | Name                 | `Foundry-@lab.LabInstance.Id` |
-    | Region               | @lab.CloudResourceGroup(ResourceGroup1).Location                     |
-    | Default Project Name | project@lab.LabInstance.Id  |
+    | Region               | @lab.CloudResourceGroup(ZAVA-Connect-RG).Location                     |
+    | Default Project Name | `project@lab.LabInstance.Id`  |
 
     Select **Review+create**.
 
@@ -213,7 +213,7 @@ Use Azure Cloud Shell (Bash) or any terminal with the Azure CLI installed.
 1. Set the names you will use in the following commands. Replace the cluster name if yours is different.
 
     ```bash
-    RG="ResourceGroup1"
+    RG="ZAVA-Connect-RG"
     CLUSTER="legalai-hdb-lab@lab.LabInstance.Id"
     PG="legalai-pg"
     ```
@@ -235,7 +235,7 @@ Use Azure Cloud Shell (Bash) or any terminal with the Azure CLI installed.
 
     ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image45.png)
 
-1. Enter`y`
+1. Enter `y`
 
     ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image46.png)
 
@@ -316,7 +316,7 @@ Use Azure Cloud Shell (Bash) or any terminal with the Azure CLI installed.
 
     ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image60.png)
 
-1. Select **+Add connection**.
+1. Select **+ Add connection**.
 
     ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image61.png)
 
@@ -572,22 +572,23 @@ The library has three kinds of documents: published court opinions, firm researc
 ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image78.png)
 
 >[!Note] Every cypher() call needs an AS (...) clause with one agtype column for each returned value. If a statement fails with a cypher function error, check that age is preloaded (Exercise 0, Task 2).
->
-> **Checkpoint:** You have 12 embedded documents and a graph that records which document cites which.
+
+**Checkpoint:** You have 12 embedded documents and a graph that records which document cites which.
 
 ## Exercise 2: Retrieve with vectors, then expand with the graph
 
 ### Task 1: Vector search alone
 
-```sql
-SELECT doc_id, title,
-       ROUND((embedding <=> legal.embed('Can a court narrow an overbroad non-compete instead of striking it down?'))::numeric, 4) AS distance
-FROM legal.documents
-ORDER BY distance
-LIMIT 3;
-```
+1. Run the following query:
+    ```sql
+    SELECT doc_id, title,
+           ROUND((embedding <=> legal.embed('Can a court narrow an overbroad non-compete instead of striking it down?'))::numeric, 4) AS distance
+    FROM legal.documents
+    ORDER BY distance
+    LIMIT 3;
+    ```
 
-**Expected result:** CASE-002 (Brightwater Logistics v. Harlan) is first or near the top. The case it builds on, CASE-001, and the later cases that apply it may rank lower or not appear, even though a complete answer needs them. This is the gap the graph fills.
+    **Expected result:** CASE-002 (Brightwater Logistics v. Harlan) is first or near the top. The case it builds on, CASE-001, and the later cases that apply it may rank lower or not appear, even though a complete answer needs them. This is the gap the graph fills.
 
 ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image79.png)
 
