@@ -94,7 +94,7 @@ After completing this lab, you will be able to:
 
 ### Task 2: Prepare your own models (bring your own model)
 
-1. In the Azure portal, open **Microsoft Foundry**.
+1. In the Azure portal, on the home page, select **Microsoft Foundry**.
 
     ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image17.png)
 
