@@ -49,9 +49,9 @@ After completing this lab, you will be able to:
 
     | **Setting**            | **Value**                          |
     |------------------------|------------------------------------|
-    | Resource group         | @lab.CloudResourceGroup(ZAVA-Connect-RG).Name                     |
+    | Resource group         | @lab.CloudResourceGroup(HorizonDB-RG).Name                     |
     | Cluster name           | `legalai-hdb-lab@lab.LabInstance.Id` |
-    | Region                 | @lab.CloudResourceGroup(ZAVA-Connect-RG).Location                         |
+    | Region                 | @lab.CloudResourceGroup(HorizonDB-RG).Location                         |
     | PostgreSQL version     | 17                                 |
     | Compute                | Select Configure -> 4 vCores       |
     | High availability      | Disabled                           |
@@ -110,9 +110,9 @@ After completing this lab, you will be able to:
 
     | Setting              | Suggested value             |
     |----------------------|-----------------------------|
-    | Resource Group       | @lab.CloudResourceGroup(ZAVA-Connect-RG).Name              |
+    | Resource Group       | @lab.CloudResourceGroup(HorizonDB-RG).Name              |
     | Name                 | `Foundry-@lab.LabInstance.Id` |
-    | Region               | @lab.CloudResourceGroup(ZAVA-Connect-RG).Location                     |
+    | Region               | @lab.CloudResourceGroup(HorizonDB-RG).Location                     |
     | Default Project Name | `project@lab.LabInstance.Id`  |
 
     Select **Review+create**.
@@ -213,7 +213,7 @@ Use Azure Cloud Shell (Bash) or any terminal with the Azure CLI installed.
 1. Set the names you will use in the following commands. Replace the cluster name if yours is different.
 
     ```bash
-    RG="ZAVA-Connect-RG"
+    RG="HorizonDB-RG"
     CLUSTER="legalai-hdb-lab@lab.LabInstance.Id"
     PG="legalai-pg"
     ```
