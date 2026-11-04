@@ -66,9 +66,9 @@ Create a dedicated HorizonDB cluster for the StreamNova search prototype.
     | Setting | Value |
     | --- | --- |
     | Subscription | @lab.CloudSubscription.Name |
-    | Resource group | @lab.CloudResourceGroup(ResourceGroup1).Name |
+    | Resource group | @lab.CloudResourceGroup(HorizonDB-RG).Name |
     | Cluster name | `streamnova-@lab.LabInstance.Id` |
-    | Region | @lab.CloudResourceGroup(ResourceGroup1).Location |
+    | Region | @lab.CloudResourceGroup(HorizonDB-RG).Location |
     | PostgreSQL version | 17 |
     | Compute | 2 vCores, if available |
     | High availability | Disabled |
@@ -119,9 +119,9 @@ Configure a parameter group to enable the PostgreSQL extensions required for vec
 
     | Setting | Value |
     | --- | --- |
-    | Resource Group | @lab.CloudResourceGroup(ResourceGroup1).Name |
+    | Resource Group | @lab.CloudResourceGroup(HorizonDB-RG).Name |
     | Parameter group name | `media-pg-@lab.LabInstance.Id` |
-    | Region | @lab.CloudResourceGroup(ResourceGroup1).Location |
+    | Region | @lab.CloudResourceGroup(HorizonDB-RG).Location |
     | PostgreSQL version | 17 |
     | Parameter group (base) | PostgreSQL 17 |
 
