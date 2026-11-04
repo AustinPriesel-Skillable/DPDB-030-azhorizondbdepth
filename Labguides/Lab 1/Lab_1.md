@@ -70,9 +70,9 @@ Northstar developers cannot start building until a managed PostgreSQL environmen
     | Setting | Value |
     | --- | --- |
     | Subscription | @lab.CloudSubscription.Name |
-    | Resource group | @lab.CloudResourceGroup(ZAVA-Connect-RG).Name |
+    | Resource group | @lab.CloudResourceGroup(HorizonDB-RG).Name |
     | Cluster name | `northstar-hdb-@lab.LabInstance.Id` |
-    | Region | @lab.CloudResourceGroup(ZAVA-Connect-RG).Location |
+    | Region | @lab.CloudResourceGroup(HorizonDB-RG).Location |
     | PostgreSQL version | 17 |
     | vCores | 2 |
     | High availability | Disabled |
@@ -129,7 +129,7 @@ Your psql client must be allowed to reach the cluster. You do this on the **Netw
 
     ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%201/media/image17.png)
 
-    The cluster appears in **@lab.CloudResourceGroup(ZAVA-Connect-RG).Name**, its status shows as available, and you have saved the primary endpoint. The database infrastructure is ready.
+    The cluster appears in **@lab.CloudResourceGroup(HorizonDB-RG).Name**, its status shows as available, and you have saved the primary endpoint. The database infrastructure is ready.
 
 
 ## Exercise 2: Protect the cluster against accidental deletion
