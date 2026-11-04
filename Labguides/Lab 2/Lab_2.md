@@ -56,9 +56,9 @@ In this exercise, you will deploy an Azure HorizonDB cluster, configure a custom
     | **Setting**    | **Suggested value**                |
     |------------------------|----------------------------------------------------------------|
     | Subscription         | @lab.CloudSubscription.Name                |
-    | Resource group     | @lab.CloudResourceGroup(ZAVA-Connect-RG).Name                 |
+    | Resource group     | @lab.CloudResourceGroup(HorizonDB-RG).Name                 |
     | Cluster name         | `finsecure-hdb-lab-@lab.labinstance.id`                    |
-    | Region         | @lab.CloudResourceGroup(ZAVA-Connect-RG).Location                     |
+    | Region         | @lab.CloudResourceGroup(HorizonDB-RG).Location                     |
     | PostgreSQL version     | 17                     |
     | Compute        | 2 vCores, if available                 |
     | High availability    | Disabled for the lowest-complexity learning setup, if optional |
@@ -118,9 +118,9 @@ HorizonDB rejects *CREATE EXTENSION* unless the extension is listed in the azure
     | **Setting**    | **Value**             |
     |------------------------|-------------------------------------|
     | Subscription         | @lab.CloudSubscription.Name         |
-    | Resource group     | @lab.CloudResourceGroup(ZAVA-Connect-RG).Name            |
+    | Resource group     | @lab.CloudResourceGroup(HorizonDB-RG).Name            |
     | Parameter group name     | `finsecure-pg`        |
-    | Region         | @lab.CloudResourceGroup(ZAVA-Connect-RG).Location (must match the cluster) |
+    | Region         | @lab.CloudResourceGroup(HorizonDB-RG).Location (must match the cluster) |
     | PostgreSQL version     | 17                |
     | Parameter group (base) | PostgreSQL 17             |
 
@@ -195,9 +195,9 @@ In this task you deploy the models and record their details.
 
     | Setting        | Suggested value     |
     |----------------------|-----------------------------|
-    | Resource Group     | @lab.CloudResourceGroup(ZAVA-Connect-RG).Name        |
+    | Resource Group     | @lab.CloudResourceGroup(HorizonDB-RG).Name        |
     | Name         | `Foundry-@lab.LabInstance.Id` |
-    | Region         | @lab.CloudResourceGroup(ZAVA-Connect-RG).Location        |
+    | Region         | @lab.CloudResourceGroup(HorizonDB-RG).Location        |
     | Default Project Name | `project-@lab.LabInstance.Id`    |
 
     Select Review+create.
@@ -862,7 +862,7 @@ You have reviewed the fraud intelligence results and can compare the assigned ri
 
 In this exercise, you will delete the Azure resources created for the lab to avoid ongoing charges after completing the fraud detection workflow.
 
-1. In the Azure portal, open **ZAVA-Connect-RG**.
+1. In the Azure portal, open **HorizonDB-RG**.
 1. Select all the resources except Foundry and Foundry project because we are going to use them in the next lab. Then select the **three-dot (...)** menu and choose **Delete**.
 1. Enter delete to confirm, then select **Delete**.
 
