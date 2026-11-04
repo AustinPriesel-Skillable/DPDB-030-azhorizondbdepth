@@ -1,4 +1,4 @@
-# Lab 5 — Optimize Vector Search at Scale with DiskANN on Azure HorizonDB
+# Lab 5: Optimize Vector Search at Scale with DiskANN on Azure HorizonDB
 
 ## Lab scenario
 
