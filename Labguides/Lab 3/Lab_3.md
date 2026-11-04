@@ -141,11 +141,11 @@ Configure a parameter group to enable the PostgreSQL extensions required for vec
 
     ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%203/media/image20.png)
 
+    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%203/media/image20.png)
+
 1. Find `shared_preload_libraries` and enable:
 
     `pg_textsearch`
-
-    ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%203/media/image20.png)
 
 1. Select **Create**.
 
