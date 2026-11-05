@@ -66,7 +66,7 @@ In this exercise, you provision an Azure HorizonDB cluster for SchedPro's Manufa
     | --- | --- |
     | Subscription | @lab.CloudSubscription.Name |
     | Resource group | @lab.CloudResourceGroup(HorizonDB-RG).Name |
-    | Cluster name | `schedpro-mes @lab.LabInstance.Id` |
+    | Cluster name | `schedpro-mes-@lab.LabInstance.Id` |
     | Region | @lab.CloudResourceGroup(HorizonDB-RG).Location |
     | PostgreSQL version | **17** |
     | vCores | **2** |
