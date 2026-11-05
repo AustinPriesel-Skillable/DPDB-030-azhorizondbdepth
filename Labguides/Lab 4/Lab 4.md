@@ -226,7 +226,7 @@ Use Azure Cloud Shell (Bash) or any terminal with the Azure CLI installed.
     az horizondb parameter-group create \
       --name $PG \
       --resource-group $RG \
-      --location centralus \
+      --location @lab.CloudResourceGroup(HorizonDB-RG).Location \
       --version 17 \
       --parameters "azure.extensions=age,azure_ai,pg_diskann,vector" "shared_preload_libraries=age" \
       --apply-immediately true \
@@ -327,7 +327,7 @@ Use Azure Cloud Shell (Bash) or any terminal with the Azure CLI installed.
     | Server name  | Primary endpoint of the cluster which we saved in Exercise 0 |
     | Username     | +++lawadmin+++                                               |
     | Password     | +++Pass@1234+++                                              |
-    | Database     | legalai_lab                                                  |
+    | Database     | `legalai_lab`                                                  |
     | Server Group | Servers                                                      |
 
     ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image62.png)
@@ -375,7 +375,7 @@ The application never calls the model functions directly. First, you register yo
 
     ```sql
     SELECT model_registry.model_add(
-        'my-embedding',                              -- model alias
+        'text-embedding-3-small',                              -- model alias
         'https://<your-foundry-resource>.services.ai.azure.com/', -- endpoint URL
         'text-embedding-3-small',               -- deployment name
         'text-embedding-3-small',                    -- model name
@@ -391,7 +391,7 @@ The application never calls the model functions directly. First, you register yo
 
     ```sql
     SELECT model_registry.model_add(
-        'my-chat',                                   -- model alias
+        'gpt-5.1',                                   -- model alias
         'https://<your-foundry-resource>.services.ai.azure.com/', -- endpoint URL
         'gpt-5.1',                     -- deployment name
         'gpt-5.1',                                   -- model name
@@ -410,7 +410,7 @@ The application never calls the model functions directly. First, you register yo
     FROM model_registry.model_list_all();
     ```
 
-    Expected result: Both my-embedding and my-chat appear in the model registry, with their corresponding deployment names and model information.
+    Expected result: Both text-embedding-3-small and gpt-5.1 appear in the model registry, with their corresponding deployment names and model information.
 
     ![](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%204/media/image70.png)
 
@@ -424,7 +424,7 @@ The application never calls the model functions directly. First, you register yo
     LANGUAGE sql STABLE
     AS $$
         SELECT azure_openai.create_embeddings(
-            'my-embedding',
+            'text-embedding-3-small',
             p_text
         )::vector
     $$;
@@ -439,7 +439,7 @@ The application never calls the model functions directly. First, you register yo
         SELECT azure_ai.generate(
             prompt => p_prompt,
             system_prompt => p_system,
-            model => 'my-chat'
+            model => 'gpt-5.1'
         )::text
     $$;
     ```
