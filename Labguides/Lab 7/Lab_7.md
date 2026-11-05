@@ -483,7 +483,7 @@ Business rules that must never be bypassed belong next to the data. In this exer
 
 ### Task 1: Create the functions and the trigger
 
->[!Notes] In this task, you create two functions and a trigger. One function enforces the approval rule, one expires stale requests, and the trigger publishes an event for each new request.
+>[!Note] In this task, you create two functions and a trigger. One function enforces the approval rule, one expires stale requests, and the trigger publishes an event for each new request.
 
 1. In the **cartwise** connection, run the following commands:
 
