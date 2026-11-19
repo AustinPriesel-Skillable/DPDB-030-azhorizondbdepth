@@ -246,7 +246,9 @@ In this task you deploy the models and record their details.
 
     ![Screenshot](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%202/media/image44.png)
 
-1. Select Deploy -> Default settings.
+1. Select Deploy -> Custom settings.
+
+1. Set the Tokens Per Minute Rate to the lowest option.
 
     ![Screenshot](https://raw.githubusercontent.com/technofocus-pte/azhorizondbdepth/refs/heads/main/Labguides/Lab%202/media/image45.png)
 
@@ -872,3 +874,4 @@ In this exercise, you will delete the Azure resources created for the lab to avo
 In this lab, you allow-listed the required extensions with a custom parameter group, configured AI models (managed or your own), and built a simplified AI-powered fraud detection workflow using Azure HorizonDB. You created a relational data model for synthetic banking transactions and fraud patterns, generated embeddings with HorizonDB AI functions, used DiskANN for vector similarity search, assigned risk bands with SQL, and generated an AI-assisted explanation for investigator review.
 
 These capabilities show how a PostgreSQL-compatible platform can combine structured transaction data, semantic retrieval, and AI inference within a single database workflow.
+
